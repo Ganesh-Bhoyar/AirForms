@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getFormById } from '../services/forms';
 import api from '../utils/api';
@@ -19,7 +19,7 @@ const ResponseViewer = () => {
         try {
             const [formData, responsesData] = await Promise.all([
                 getFormById(formId!),
-                api.get(`/api/submit/${formId}`).then(res => res.data)
+                api.get(`/api/submit/${formId}`).then((res: any) => res.data)
             ]);
             setForm(formData);
             setResponses(responsesData);
