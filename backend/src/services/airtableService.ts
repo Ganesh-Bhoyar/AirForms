@@ -15,7 +15,7 @@ export const getValidToken = async (user: IUser): Promise<string> => {
         return user.accessToken;
     }
 
-    // Refresh token
+ 
     try {
         const credentials = Buffer.from(`${AIRTABLE_CONFIG.CLIENT_ID}:${AIRTABLE_CONFIG.CLIENT_SECRET}`).toString('base64');
         const response = await axios.post(AIRTABLE_CONFIG.TOKEN_URL,
@@ -48,6 +48,7 @@ export const getBases = async (user: IUser) => {
     const response = await axios.get(`${AIRTABLE_CONFIG.API_URL}/meta/bases`, {
         headers: { Authorization: `Bearer ${token}` }
     });
+    console.log(response.data.bases);
     return response.data.bases;
 };
 
@@ -57,7 +58,7 @@ export const getTables = async (user: IUser, baseId: string) => {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    // Filter fields in the tables
+    
     const tables = response.data.tables.map((table: any) => ({
         ...table,
         fields: table.fields.filter((field: any) => SUPPORTED_FIELD_TYPES.includes(field.type))

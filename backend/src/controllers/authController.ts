@@ -4,20 +4,42 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AIRTABLE_CONFIG } from '../config/oauth';
 
-// Helper to encode PKCE verifier (if we were using PKCE, but Airtable uses standard code flow for server-side apps usually, 
-// but let's stick to the standard Authorization Code flow as per their docs).
-// Actually Airtable uses PKCE for public clients, but for confidential clients (server-side) we use client_secret.
+
+
+import crypto from 'crypto';
+
+
+const generateRandomString = (length: number) => {
+    return crypto.randomBytes(length).toString('hex');
+};
+
+
+const generateCodeChallenge = (verifier: string) => {
+    return crypto.createHash('sha256').update(verifier).digest('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+};
 
 export const login = (req: Request, res: Response) => {
-    // State should ideally be a random string stored in session to prevent CSRF
-    const state = 'some_random_state';
+    const state = generateRandomString(16);
+    const codeVerifier = generateRandomString(32);
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+
+    res.cookie('code_verifier', codeVerifier, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 600000 // 10 minutes
+    });
 
     const params = new URLSearchParams({
         client_id: AIRTABLE_CONFIG.CLIENT_ID,
         redirect_uri: AIRTABLE_CONFIG.REDIRECT_URI,
         response_type: 'code',
         scope: AIRTABLE_CONFIG.SCOPE,
-        state: state
+        state: state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256'
     });
 
     res.redirect(`${AIRTABLE_CONFIG.AUTH_URL}?${params.toString()}`);
@@ -25,31 +47,35 @@ export const login = (req: Request, res: Response) => {
 
 export const callback = async (req: Request, res: Response) => {
     const { code, state, error } = req.query;
+    const codeVerifier = req.cookies.code_verifier;
 
     if (error) {
         return res.status(400).json({ error: 'Airtable auth failed', details: error });
     }
 
-    if (!code) {
-        return res.status(400).json({ error: 'No code provided' });
+    if (!code || !codeVerifier) {
+        return res.status(400).json({ error: 'No code or verifier provided' });
     }
 
     try {
-        // Exchange code for tokens
-        // Airtable requires Basic Auth for the token endpoint with client_id:client_secret
+
         const credentials = Buffer.from(`${AIRTABLE_CONFIG.CLIENT_ID}:${AIRTABLE_CONFIG.CLIENT_SECRET}`).toString('base64');
 
         const tokenResponse = await axios.post(AIRTABLE_CONFIG.TOKEN_URL,
             new URLSearchParams({
                 code: code as string,
                 redirect_uri: AIRTABLE_CONFIG.REDIRECT_URI,
-                grant_type: 'authorization_code'
+                grant_type: 'authorization_code',
+                code_verifier: codeVerifier
             }), {
             headers: {
                 'Authorization': `Basic ${credentials}`,
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         });
+
+        // Clear verifier cookie
+        res.clearCookie('code_verifier');
 
         const { access_token, refresh_token, expires_in, refresh_expires_in } = tokenResponse.data;
 
@@ -84,20 +110,18 @@ export const callback = async (req: Request, res: Response) => {
             });
         }
 
-        // Create JWT Session
+
         const token = jwt.sign({ id: user._id, airtableId: user.airtableId }, process.env.JWT_SECRET || 'secret', {
             expiresIn: '7d'
         });
 
-        // Set cookie
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
-        // Redirect to frontend dashboard
-        res.redirect('http://localhost:5173/dashboard');
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard`);
 
     } catch (err: any) {
         console.error('Auth Error:', err.response?.data || err.message);
@@ -125,3 +149,4 @@ export const logout = (req: Request, res: Response) => {
     res.clearCookie('token');
     res.json({ success: true });
 };
+

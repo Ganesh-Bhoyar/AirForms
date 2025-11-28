@@ -6,7 +6,7 @@ export interface IQuestion {
     label: string;
     type: string;
     required: boolean;
-    options?: string[]; // For select fields
+    options?: string[];  
     conditions?: {
         questionKey: string;
         operator: 'equals' | 'notEquals' | 'contains';

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+ 
+
+dist
+build
+
+ 
+.DS_Store
+.env
+.env.local
+

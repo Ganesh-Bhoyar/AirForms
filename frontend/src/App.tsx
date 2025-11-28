@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import FormBuilder from './pages/FormBuilder';
+import FormViewer from './pages/FormViewer';
+import ResponseViewer from './pages/ResponseViewer';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -33,6 +35,15 @@ function App() {
             element={
               <PrivateRoute>
                 <FormBuilder />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/form/:formId" element={<FormViewer />} />
+          <Route
+            path="/responses/:formId"
+            element={
+              <PrivateRoute>
+                <ResponseViewer />
               </PrivateRoute>
             }
           />

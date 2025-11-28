@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import airtableRoutes from './routes/airtableRoutes';
 import formRoutes from './routes/formRoutes';
+import submissionRoutes from './routes/submissionRoutes';
+import webhookRoutes from './routes/webhookRoutes';
 
 dotenv.config();
 
@@ -24,6 +26,8 @@ app.use(cookieParser());
 app.use('/auth', authRoutes);
 app.use('/api/airtable', airtableRoutes);
 app.use('/api/forms', formRoutes);
+app.use('/api/submit', submissionRoutes);
+app.use('/webhooks', webhookRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');
