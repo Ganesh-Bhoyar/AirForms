@@ -42,7 +42,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const login = () => {
-        window.location.href = 'http://localhost:5000/auth/airtable';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        window.location.href = `${apiUrl}/auth/airtable`;
     };
 
     const logout = async () => {
